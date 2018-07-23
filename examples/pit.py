@@ -5,11 +5,11 @@ input mesh.
 ##
 import os
 import numpy as np
+import math
 import mayavi.mlab as mlab
 import itertools
 import utils
 import ply
-import numpy
 import meshcut
 from matplotlib import pyplot
 ##
@@ -19,6 +19,50 @@ colors = [
     (1, 0, 1),
     (0, 0, 1)
 ]
+
+def rotate(x_section, axis, theta):
+    """
+    Return the rotation matrix associated with counterclockwise rotation about
+    the given axis by theta radians.
+    """
+    axis = np.asarray(axis)
+    axis = axis/math.sqrt(np.dot(axis, axis))
+    a = math.cos(theta/2.0)
+    b, c, d = -axis*math.sin(theta/2.0)
+    aa, bb, cc, dd = a*a, b*b, c*c, d*d
+    bc, ad, ac, ab, bd, cd = b*c, a*d, a*c, a*b, b*d, c*d
+    rot_mat = np.array([[aa+bb-cc-dd, 2*(bc+ad), 2*(bd-ac)],
+                     [2*(bc-ad), aa+cc-bb-dd, 2*(cd+ab)],
+                     [2*(bd+ac), 2*(cd-ab), aa+dd-bb-cc]])
+    rotated = np.array([np.dot(rot_mat, point) for point in x_section])
+    return rotated
+
+class cutplane:
+    def __init__(self, angle, mesh, origin = [0, 0, 0], color=(0,0,0)):
+        self.angle = angle
+        self.mesh = mesh
+        self.origin = origin
+        self.color = color
+
+        self.plane = meshcut.Plane(origin, self.get_normal())
+        self.sliced = meshcut.cross_section_mesh(mesh, self.plane)
+
+    def get_normal(self):
+        return (np.cos(self.angle), np.sin(self.angle), 0)
+
+    def plot_3D(self, unrotated = False):
+        for seg in self.sliced:
+            if unrotated:
+                seg = rotate(seg, [0, 0, 1], 2*np.pi - self.angle)
+            mlab.plot3d(seg[:, 0], seg[:, 1], seg[:, 2], tube_radius=None,
+                    line_width=3.0, color=self.color)
+
+    def plot_2D(self):
+        pyplot.figure()
+        for seg in self.sliced:
+            unrotated_seg = rotate(seg, [0, 0, 1], 2*np.pi - self.angle)
+            pyplot.plot(seg[:, 0], seg[:, 2])
+        pyplot.show()
 
 #Load and plot the pretty mesh
 with open(r"C:\Users\aaron\sfm\tranquilitatis\cross-sections\MTP_V2.ply") as f:
@@ -31,26 +75,13 @@ with open(r"C:\Users\aaron\sfm\tranquilitatis\cross-sections\MTP_V2_print.ply") 
     display_mesh = ply.load_ply(f)
     mesh = meshcut.TriangleMesh(verts=display_mesh[0], tris=display_mesh[1])
 
-plane_orig = (0, 0, 0)
-plane_angles = numpy.arange(0, 2*numpy.pi, 0.2*numpy.pi)
-plane_normals = [(numpy.cos(angle), numpy.sin(angle), 0) for angle in plane_angles]
-slices = []
 #create all the cut planes
-for plane_normal in plane_normals:
-    plane = meshcut.Plane(plane_orig, plane_normal)
-    sliced = meshcut.cross_section_mesh(mesh, plane)
-    for p, color in zip(sliced, itertools.cycle(colors)):
-        p = np.array(p)
-        #utils.points3d(np.array(p), point_size=3, color=(1,1,1))
-        mlab.plot3d(p[:, 0], p[:, 1], p[:, 2], tube_radius=None,
-                    line_width=3.0, color=color)
-    # sliced = slice_and_display(plane, expected_n_contours=3)
-mlab.show()
+xs_angles = np.arange(0, 2*np.pi, 0.2*np.pi)
+slices = []
+for xs_angle in xs_angles:
+    slices.append(cutplane(angle = xs_angle, mesh = mesh))
+print('end')
+#mlab.show()
 
-pyplot.figure()
-#TODO needs rotation before plotting in 2d
-[pyplot.plot(seg[:, 0], seg[:, 1], '.') for seg in sliced]
-pyplot.show()
-slices.append(sliced)
 
 

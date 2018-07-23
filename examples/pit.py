@@ -58,11 +58,9 @@ class cutplane:
                     line_width=3.0, color=self.color)
 
     def plot_2D(self):
-        pyplot.figure()
         for seg in self.sliced:
             unrotated_seg = rotate(seg, [0, 0, 1], 2*np.pi - self.angle)
-            pyplot.plot(seg[:, 0], seg[:, 2])
-        pyplot.show()
+            pyplot.plot(unrotated_seg[:, 1], unrotated_seg[:, 2])
 
 #Load and plot the pretty mesh
 with open(r"C:\Users\aaron\sfm\tranquilitatis\cross-sections\MTP_V2.ply") as f:
@@ -76,10 +74,16 @@ with open(r"C:\Users\aaron\sfm\tranquilitatis\cross-sections\MTP_V2_print.ply") 
     mesh = meshcut.TriangleMesh(verts=display_mesh[0], tris=display_mesh[1])
 
 #create all the cut planes
-xs_angles = np.arange(0, 2*np.pi, 0.2*np.pi)
+xs_angles = np.arange(0, 2*np.pi, (2.0*np.pi)/10)
 slices = []
-for xs_angle in xs_angles:
-    slices.append(cutplane(angle = xs_angle, mesh = mesh))
+initial_subplot = pyplot.subplot(2, 5, 1)
+for n, xs_angle in enumerate(xs_angles):
+    newcut = cutplane(angle=xs_angle, mesh=mesh)
+    slices.append(newcut)
+    pyplot.subplot(2, 5, n+1, sharex=initial_subplot, sharey=initial_subplot)
+    newcut.plot_2D()
+pyplot.show()
+
 print('end')
 #mlab.show()
 

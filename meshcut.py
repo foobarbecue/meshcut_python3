@@ -48,7 +48,10 @@ class TriangleMesh(object):
 
         # Sanity check : max 2 faces per edge
         for e, tris in self.edges_to_tris.items():
-            assert len(tris) <= 2
+            try:
+                assert len(tris) <= 2
+            except AssertionError:
+                print('{} had more than 2 tris'.format(e))
 
     def edges_for_triangle(self, tidx):
         """Returns the edges forming triangle with given index"""
